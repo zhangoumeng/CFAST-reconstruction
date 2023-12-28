@@ -6,7 +6,6 @@ from tqdm import tqdm
 from skimage import io
 import scipy.io as sio
 import matplotlib.pyplot as plt
-from skimage.transform import resize
 from scipy.io import savemat
 
 from network import DeconNet
@@ -22,15 +21,15 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", default=100, type=int)
     parser.add_argument("--model_opt", default="None", type=str) # "jit". "compile", "None"
     parser.add_argument("--use_amp", default=True, type=bool)
-    parser.add_argument("--imsize", default=1150, type=int)
+    parser.add_argument("--imsize", default=620, type=int)
 
     args = parser.parse_args()
 
-    fPath = './'
-    PSFPath = './'
+    fPath = './data'
+    PSFPath = './utils'
     fName = 'data_fluorescence.tif'
     # .tif stack with 4 slices, each corresponds to a pupil block orientation
-    PSFName = 'PSF_80um.mat'
+    PSFName = 'PSF.mat'
     
     num_epochs = args.num_epochs
     is_opt = args.model_opt
@@ -46,16 +45,10 @@ if __name__ == "__main__":
     PSFsize = PSF.shape[2]
 
     # In[]  Load image
-    img = torch.from_numpy(np.zeros((4, 1, 750, 750))).cuda()
+    img = torch.from_numpy(np.zeros((4, 1, 600, 600))).cuda()
     for i in range(4):
         imgTmp = io.imread(os.path.join(fPath,fName), img_num=i)
-                
-        imgTmp = imgTmp[:, 500:3500] # crop center area of the 3000x4000 image
-
-        imgTmp = resize(imgTmp, (imgTmp.shape[0]//4, imgTmp.shape[1]//4)) # downsample for faster performance
-        
         imgTmp = np.double(imgTmp).astype(np.float32)
-        
         img[i,0,:,:] = torch.from_numpy(imgTmp)
         
     del imgTmp
@@ -85,3 +78,27 @@ if __name__ == "__main__":
     g_numpy = g.cpu().numpy()
     savemat('result.mat', {'g': g_numpy})
 
+    # In[] plot results
+    plt.figure(figsize=(6, 4), dpi=300)
+    plt.subplot(1,3,1)
+    plt.imshow(g_numpy[0,10,:,:], cmap='gray')
+    plt.axis('image')
+    plt.axis('off')
+    plt.title('-10 micron')
+    plt.clim(0, 4e3) 
+
+    plt.subplot(1,3,2)
+    plt.imshow(g_numpy[0,20,:,:], cmap='gray')
+    plt.axis('image')
+    plt.axis('off')
+    plt.title('10 micron')
+    plt.clim(0, 4e3) 
+
+    plt.subplot(1,3,3)
+    plt.imshow(g_numpy[0,30,:,:], cmap='gray')
+    plt.axis('image')
+    plt.axis('off')
+    plt.title('10 micron')
+    plt.clim(0, 4e3) 
+    
+    plt.show()
